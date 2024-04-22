@@ -21,6 +21,7 @@ export async function POST(
       return new NextResponse("Unauthorized",{status:401});
     }
 
+    console.time("seen:find");
     const conversation = await prisma.conversation.findUnique({
       where: {
         id: conversationId
@@ -34,6 +35,7 @@ export async function POST(
         users: true,
       }
     });
+    console.timeEnd("seen:find");
 
     if(!conversation){
       return new NextResponse("Invalid ID",{status:400});
@@ -45,6 +47,7 @@ export async function POST(
       return NextResponse.json(conversation);
     }
 
+    console.time("seen:update");
     //更新看到过消息的用户列表
     const updateMessage = await prisma.message.update({
       where: {
@@ -62,17 +65,23 @@ export async function POST(
         }
       }
     });
+    console.timeEnd("seen:update");
 
+    console.time("pusher:conversation:update");
     await pusherServer.trigger(currentUser.email,'conversation:update',{
       id:conversationId,
       messages: [updateMessage]
     })
 
+    console.timeEnd("pusher:conversation:update");
     if(lastMessage.seenIds.indexOf(currentUser.id) !== -1){
       return NextResponse.json(conversation);
     }
 
+    console.time("pusher:message:update");
+
     await pusherServer.trigger(conversationId!,'message:update',updateMessage);
+    console.timeEnd("pusher:message:update");
 
     return NextResponse.json(updateMessage);
 

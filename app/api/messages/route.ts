@@ -22,6 +22,7 @@ export async function POST(
         return new NextResponse("Unauthorized",{status:401}); 
       }
 
+      console.time('message:create');
       const newMessage = await prisma.message.create({
         data:{
           body:message,
@@ -47,7 +48,8 @@ export async function POST(
           sender: true,
         }
       });
-
+      console.timeEnd("message:create");
+      console.time("message:update");
       const updatedConversation = await prisma.conversation.update({
         where:{
           id:conversationId
@@ -69,10 +71,16 @@ export async function POST(
           }
         }
       });
+      console.timeEnd("message:update");
+
+      console.time("pusher:message:new");
 
       await pusherServer.trigger(conversationId,'messages:new',newMessage);
+      console.timeEnd("pusher:message:new");
 
       const lastMessage = updatedConversation.messages[updatedConversation.messages.length-1];
+
+      console.time("pusher:conversation:update");
 
       updatedConversation.users.map((user:any) => {
         pusherServer.trigger(user.email!,'conversation:update',{
@@ -80,6 +88,8 @@ export async function POST(
           messages: [lastMessage]
         })
       })
+
+      console.timeEnd("pusher:conversation:update");
 
       return NextResponse.json(newMessage);
 
