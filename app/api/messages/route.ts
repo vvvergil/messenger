@@ -10,7 +10,7 @@ export async function POST(
       const currentUser = await getCurrentUser();
       const body = await request.json();
 
-      console.log(body);
+      //console.log(body);
       
       const {
         message,
@@ -74,7 +74,7 @@ export async function POST(
 
       const lastMessage = updatedConversation.messages[updatedConversation.messages.length-1];
 
-      updatedConversation.users.map((user) => {
+      updatedConversation.users.map((user:any) => {
         pusherServer.trigger(user.email!,'conversation:update',{
           id:conversationId,
           messages: [lastMessage]
